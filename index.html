@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Psych Vocab Quiz</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: single narrow study column; one question card at a time, controls above, score strip on top */
+:root{
+  --bg:#eef1f5; --surface:#ffffff; --ink:#1d2433; --muted:#5d6678; --line:#d6dbe4;
+  --accent:#d9546b; --accent-soft:#fbe3e7; --accent-ink:#ffffff;
+  --good:#1f8a5b; --good-soft:#dcf2e7; --bad:#c2412d; --bad-soft:#fbe4df;
+  --display:"Bricolage Grotesque", "Trebuchet MS", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141821; --surface:#1e2430; --ink:#e9ecf2; --muted:#9aa3b5; --line:#323a4a;
+  --accent:#f07a8e; --accent-soft:#3a2229; --accent-ink:#1a0d10;
+  --good:#5fd29b; --good-soft:#163527; --bad:#f08a76; --bad-soft:#3b1f19; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141821; --surface:#1e2430; --ink:#e9ecf2; --muted:#9aa3b5; --line:#323a4a;
+  --accent:#f07a8e; --accent-soft:#3a2229; --accent-ink:#1a0d10;
+  --good:#5fd29b; --good-soft:#163527; --bad:#f08a76; --bad-soft:#3b1f19; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font-family:var(--display);font-weight:800;font-size:1.9rem;line-height:1.1;margin:0;text-wrap:balance}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin:4px 0 0;font-size:.95rem}
+.label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:6px}
+.seg{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:transparent;color:var(--ink);font:700 .92rem var(--body);padding:10px 6px;border-radius:9px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:700 .85rem var(--body);padding:7px 12px;border-radius:999px;cursor:pointer}
+.chip.unit[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;gap:8px;font-size:.92rem;color:var(--muted);cursor:pointer}
+.toggle input{width:18px;height:18px;accent-color:var(--accent)}
+.bar{display:flex;justify-content:space-between;align-items:center;font-variant-numeric:tabular-nums;font-weight:700;color:var(--muted);font-size:.9rem}
+.bar b{color:var(--ink)}
+.progress{height:6px;background:var(--line);border-radius:6px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px 20px;box-shadow:0 6px 24px -14px rgba(20,30,50,.35)}
+.region{display:inline-block;font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;font-weight:700;color:var(--accent);margin-bottom:8px}
+.prompt{font-size:1.12rem;margin:0}
+.prompt.term{font-family:var(--display);font-weight:800;font-size:1.8rem;line-height:1.15}
+.opts{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.opt{text-align:left;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:400 1rem/1.4 var(--body);padding:13px 14px;border-radius:12px;cursor:pointer;width:100%}
+.opt.t{font-family:var(--display);font-weight:600;font-size:1.1rem}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.right{border-color:var(--good);background:var(--good-soft)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.opt:disabled{cursor:default}
+.feedback{margin-top:14px;font-weight:700}
+.feedback.ok{color:var(--good)} .feedback.no{color:var(--bad)}
+.feedback small{display:block;font-weight:400;color:var(--muted);margin-top:4px}
+input[type=text]{width:100%;font:400 1.1rem var(--body);padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);margin-top:18px}
+input[type=text]:focus{outline:none;border-color:var(--accent)}
+.btn{border:0;background:var(--accent);color:var(--accent-ink);font:700 1rem var(--body);padding:13px 18px;border-radius:12px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btns{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btns .btn{flex:1;min-width:120px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+/* flashcard */
+.flip{perspective:1200px;cursor:pointer}
+.flip-inner{position:relative;min-height:240px;transition:transform .45s;transform-style:preserve-3d}
+.flip.on .flip-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;justify-content:center}
+.face.back{transform:rotateY(180deg)}
+.hint{color:var(--muted);font-size:.85rem;margin-top:14px}
+.big{font-family:var(--display);font-weight:800;font-size:3rem;line-height:1;margin:6px 0}
+.missed{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+.missed div{border-top:1px solid var(--line);padding-top:10px}
+.missed b{font-family:var(--display)}
+@media (prefers-reduced-motion:reduce){.flip-inner,.progress i{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Psych Vocab <span>Quiz</span></h1>
+    <p class="sub" id="sub"></p>
+    <p class="sub"><a href="Psych_Vocab_Study_Guide.pdf" style="color:var(--accent);font-weight:700">Download the printable study guide (PDF)</a></p>
+  </header>
+
+  <div>
+    <div class="label">Topic</div>
+    <div class="chips" id="units">
+      <button class="chip unit" data-u="parts" aria-pressed="true">Brain parts</button>
+      <button class="chip unit" data-u="chem" aria-pressed="false">Brain chemicals</button>
+      <button class="chip unit" data-u="neuro" aria-pressed="false">Neurons &amp; nerves</button>
+      <button class="chip unit" data-u="senses" aria-pressed="false">Sensation</button>
+      <button class="chip unit" data-u="sleep" aria-pressed="false">Sleep</button>
+      <button class="chip unit" data-u="drugs" aria-pressed="false">Drugs</button>
+      <button class="chip unit" data-u="genes" aria-pressed="false">Nature &amp; nurture</button>
+      <button class="chip unit" data-u="all" aria-pressed="false">Everything</button>
+    </div>
+  </div>
+
+  <div>
+    <div class="label">How to practice</div>
+    <div class="seg" id="modes">
+      <button data-m="mc" aria-pressed="true">Multiple choice</button>
+      <button data-m="type" aria-pressed="false">Type it</button>
+      <button data-m="flash" aria-pressed="false">Flashcards</button>
+    </div>
+  </div>
+
+  <div>
+    <div class="label">Sections</div>
+    <div class="chips" id="regions"></div>
+  </div>
+
+  <label class="toggle" id="dirWrap"><input type="checkbox" id="dir"> Show the term, pick the definition</label>
+
+  <div>
+    <div class="bar"><span id="count">1 / 18</span><span>Score <b id="score">0</b></span></div>
+    <div class="progress"><i id="prog"></i></div>
+  </div>
+
+  <div id="stage"></div>
+</div>
+
+<script>
+const TERMS=[
+ ["Brain stem","Brain stem","Lowest part of the brain. Connects the spinal cord to higher regions and handles unconscious functions."],
+ ["Medulla","Brain stem","Base of the brain stem. Controls involuntary, basic life functions: heart rate, breathing, sneezing, digestion and swallowing. Vital for life."],
+ ["Pons","Brain stem","Regulates the sleep–wake cycle."],
+ ["Midbrain","Brain stem","A relay system that transmits information for vision and hearing. Also plays a role in pain."],
+ ["Reticular activating system","Brain stem","Similar to the brain's reward center. Controls some voluntary movement, eye movement, certain types of learning and cognition, and emotion."],
+ ["Frontal lobe","Cerebral cortex","The command center of the brain: decision making, judgement, problem solving, personality, reasoning, planning and language. Enables complex thoughts and hope for the future."],
+ ["Parietal lobe","Cerebral cortex","Processes body signals like pain, touch and temperature."],
+ ["Motor cortex","Cerebral cortex","Attached to the frontal lobe. Helps control voluntary movement."],
+ ["Somatosensory cortex","Cerebral cortex","Part of the parietal lobe. Holds the specific regions the parietal lobe takes signals from."],
+ ["Temporal lobe","Cerebral cortex","Near the ear. Helps process tone and melody, along with hearing and auditory memories."],
+ ["Occipital lobe","Cerebral cortex","The visual processing part of the brain: visuospatial processing, distance and depth perception, color, object and face recognition, and memory formation."],
+ ["Broca's area","Cerebral cortex","Essential for speech. Sends commands to the muscles to produce sounds."],
+ ["Wernicke's area","Cerebral cortex","Important for understanding speech, including your own speech."],
+ ["Cerebellum","Hindbrain","Responsible for muscle control, including balance and movement. Especially sensitive to alcohol."],
+ ["Corpus callosum","Center of the brain","Lets the left and right hemispheres of the brain communicate."],
+ ["Thalamus","Limbic system","The brain's sensory \"switchboard.\" Relay station between the brain stem and the cortex that routes sensory information to where it needs to go."],
+ ["Hippocampus","Limbic system","Stores long-term information: remembering facts and memories."],
+ ["Hypothalamus","Limbic system","Survival drives and homeostasis. Alerts the body when it needs something and controls the pituitary gland."],
+ ["Amygdala","Limbic system","Processes emotions and survival responses. Activated when you become afraid."],
+
+ ["Dopamine","Neurotransmitters","Activates the reward and pleasure system, influencing motivation, decisions and more."],
+ ["Serotonin","Neurotransmitters","Inhibitory transmitter that regulates emotions and sleep."],
+ ["Norepinephrine","Neurotransmitters","Neurotransmitter and hormone that controls alertness, arousal and \"fight or flight.\""],
+ ["Glutamate","Neurotransmitters","Excitatory neurotransmitter in the central nervous system. Makes an action potential more likely and helps long-term memory and learning."],
+ ["GABA","Neurotransmitters","Inhibitory neurotransmitter that slows down neural activity, calms the nervous system, and regulates mood, sleep and anxiety."],
+ ["Endorphin","Neurotransmitters","Produced in the central nervous system. Reduces pain and encourages pleasure and euphoria."],
+ ["Substance P","Neurotransmitters","Transmits pain signals from the peripheral nervous system to the central nervous system."],
+ ["Acetylcholine","Neurotransmitters","Enables muscle action, learning and memory, and overall cognitive functioning."],
+ ["Hormones","Hormones","Chemical messengers that target specific parts of the body to cause change. Slower than neurotransmitters."],
+ ["Adrenaline","Hormones","Stress hormone from the adrenal gland, released in response to physical or mental stress, fear or excitement. Triggers \"fight or flight.\""],
+ ["Leptin","Hormones","Protein hormone produced by fat cells that regulates hunger."],
+ ["Ghrelin","Hormones","Hunger hormone produced by an empty stomach that triggers hunger."],
+ ["Melatonin","Hormones","Sleep-inducing hormone made in the pineal gland. Regulates the body's 24-hour clock for sleep."],
+ ["Oxytocin","Hormones","Made by the hypothalamus and released by the pituitary gland. The biological basis for social bonding, trust and reproduction."],
+
+ ["Neurons","Neurons","The basic building blocks of the nervous system."],
+ ["Glial cells","Neurons","Non-neuron cells that protect and support neurons."],
+ ["Reflex","Neurons","An involuntary, unconscious movement in response to a stimulus, carried out by a fast neural pathway (the reflex arc)."],
+ ["Sensory neurons","Neurons","Nerve cells in the peripheral nervous system that carry sensory info (eyes, ears, nose, etc.) to the central nervous system."],
+ ["Motor neurons","Neurons","Carry info from the central nervous system out to the body to activate muscles."],
+ ["Interneurons","Neurons","The \"middlemen\" in the central nervous system between sensory inputs and motor outputs."],
+ ["Neural transmission","Neurons","The electrochemical process neurons use to communicate within the brain and body."],
+ ["Action potential","Neurons","A brief, all-or-nothing electrical charge: the neuron either fires or it doesn't."],
+ ["All-or-nothing principle","Neurons","A neuron either fires completely or not at all. There is no in-between."],
+ ["Threshold","Neurons","The level of energy or stimulation needed to trigger a response."],
+ ["Depolarization","Neurons","A neuron becomes less negative than its resting state, making it more likely to reach an action potential."],
+ ["Refractory period","Neurons","The rest time right after an action potential, before the neuron can fire again."],
+ ["Resting potential","Neurons","When a neuron is negatively charged and not firing."],
+ ["Reuptake","Neurons","The sending neuron reabsorbs extra neurotransmitters from the synaptic gap."],
+ ["Excitatory neurotransmitters","Neurons","Chemical messengers that make a neuron more likely to fire an action potential."],
+ ["Inhibitory neurotransmitters","Neurons","Chemical messengers that make a neuron less likely to fire an action potential."],
+ ["Multiple sclerosis","Neurons","Chronic autoimmune disorder where the immune system attacks the protective layer (myelin) around nerve axons."],
+ ["Myasthenia gravis","Neurons","Chronic autoimmune disorder that blocks signals from nerves to muscles, causing muscle weakness."],
+ ["Central nervous system","Nervous system","The brain and spinal cord. Makes decisions and sends out commands."],
+ ["Peripheral nervous system","Nervous system","Everything outside the brain and spinal cord. Brings info to the central nervous system."],
+ ["Autonomic nervous system","Nervous system","Division of the peripheral nervous system that controls involuntary body functions."],
+ ["Sympathetic nervous system","Nervous system","Part of the autonomic nervous system that controls \"fight or flight.\""],
+ ["Parasympathetic nervous system","Nervous system","Part of the autonomic nervous system that controls \"rest and digest.\""],
+ ["Somatic nervous system","Nervous system","Division of the peripheral nervous system that controls voluntary movement."],
+
+ ["Sensation","Sensation basics","Input: the process by which sensory receptors and the nervous system detect raw energy from the environment."],
+ ["Perception","Sensation basics","Output: what the brain does with the sensory information it receives."],
+ ["Transduction","Sensation basics","Turning one kind of energy (light waves, sound waves, etc.) into neural signals the brain can process."],
+ ["Absolute threshold","Sensation basics","The minimum stimulus intensity a person can detect 50% of the time."],
+ ["Difference threshold","Sensation basics","The minimum difference between two stimuli that a person can notice 50% of the time. Also called the just-noticeable difference."],
+ ["Weber's law","Sensation basics","To be noticed as different, two stimuli must differ by a constant minimum percentage, not a constant amount."],
+ ["Signal detection theory","Sensation basics","Detecting a stimulus is not a fixed percentage. It also depends on experience, expectations and alertness."],
+ ["Subliminal stimulation","Sensation basics","Information presented below the level of conscious awareness (below the absolute threshold)."],
+ ["Sensory adaptation","Sensation basics","Becoming less sensitive to a constant, unchanging stimulus after continued exposure, so it fades into the background."],
+ ["Sensory interaction","Sensation basics","One sense can influence or blend with another, like taste and smell."],
+ ["Synesthesia","Sensation basics","Neurological condition where one sense involuntarily activates another."],
+ ["Retina","Vision","Light-sensitive inner surface at the back of the eye. Contains the rods and cones that carry out visual transduction."],
+ ["Blind spot","Vision","The point on the retina where the optic nerve leaves the eye, creating a gap in vision."],
+ ["Optic nerve","Vision","A bundle of nerve fibers that carries neural impulses from the eye to the brain."],
+ ["Lens","Vision","The clear structure behind the pupil and iris that focuses incoming light rays for near and far objects."],
+ ["Accommodation","Vision","The lens changing shape to focus on near or far objects. (In Piaget's theory, it means changing existing frameworks to fit new info.)"],
+ ["Nearsightedness","Vision","Close objects are clear but far objects are blurry, because light focuses in front of the retina."],
+ ["Farsightedness","Vision","Near objects are blurry but far objects are clear, because light focuses behind the retina."],
+ ["Photoreceptors","Vision","Specialized light-detecting sensory neurons in the retina that perform transduction."],
+ ["Rods","Vision","Photoreceptors in the retina that detect black, white and grey."],
+ ["Cones","Vision","Receptor cells in the retina that process detail and color. Come in red, green and blue types."],
+ ["Young-Helmholtz trichromatic theory","Vision","The retina contains three types of cones: red, green and blue."],
+ ["Opponent-process theory","Vision","Colors are processed in opposing pairs (red–green, blue–yellow, black–white), so you can't see a \"reddish green.\""],
+ ["Afterimages","Vision","After staring at a strong color, an image stays in your vision once it's gone, but in a different (opposite) color."],
+ ["Ganglion cells","Vision","Specialized neurons whose fibers form the optic nerve."],
+ ["Volley theory","Hearing","Groups of neurons fire in a pattern that matches the frequency of a sound."],
+ ["Frequency theory","Hearing","A single neuron fires at a rate that matches the sound wave's frequency."],
+ ["Place theory","Hearing","Different sound frequencies stimulate different places in the ear (cochlea)."],
+ ["Sound localization","Hearing","The auditory system's ability to identify where a sound is coming from."],
+ ["Conduction deafness","Hearing","Hearing loss from damage to the outer or middle part of the ear."],
+ ["Sensorineural deafness","Hearing","Hearing loss from damage to the inner part of the ear."],
+ ["Olfaction","Other senses","The sense of smell. Detects odor molecules to tell you how to react (smoke = run, sweet = happy). Uses the olfactory bulbs."],
+ ["Gustation","Other senses","The sense of taste, using taste buds: sweet, sour, salty, bitter, umami and oleogustus (fat). Supertasters have more taste buds."],
+ ["Pheromones","Other senses","Chemical substances released by the body to affect others."],
+ ["Kinesthesis","Other senses","The body's sense of its own position, weight and movement of body parts, so you don't run into things. Linked to the cerebellum."],
+ ["Vestibular sense","Other senses","The sense of balance and spatial orientation that keeps you upright. Linked to the cerebellum."],
+ ["Tactile sense","Other senses","The sense of touch, a mix of four senses: pain, pressure, cold and warmth. Processed in the somatosensory cortex."],
+ ["Pain","Other senses","A biopsychosocial experience: a harmful signal to the brain (biological), shaped by beliefs (psychological) and social norms (social)."],
+ ["Gate control theory","Other senses","The spinal cord has a \"neurological gate\" that either blocks or allows pain signals to reach the brain."],
+ ["Phantom limb sensation","Other senses","Feeling sensations or pain in a limb that is no longer there."],
+
+ ["REM sleep","Sleep","A recurring, active sleep stage where dreams occur."],
+ ["REM rebound","Sleep","The body's tendency to get more REM sleep after being deprived of it."],
+ ["Activation-synthesis theory","Sleep","Theory that dreams are the brain trying to make sense of random neural activity during REM sleep."],
+ ["Consolidation theory","Sleep","Theory that sleep and dreams help turn fragile short-term memories into long-term memories."],
+ ["Memory consolidation","Sleep","The biological and cognitive process that turns short-term memories into long-term memories."],
+ ["Narcolepsy","Sleep","Chronic neurological sleep disorder where sleep suddenly happens during the daytime."],
+ ["Sleep apnea","Sleep","Disorder that causes breathing to stop briefly during sleep, with repeated momentary awakenings."],
+ ["Somnambulism","Sleep","The technical term for sleepwalking. Happens during NREM-3 sleep."],
+
+ ["Psychoactive drugs","How drugs work","Chemicals that change behavior, perception, mood and consciousness by altering neurotransmitter activity at the synapse."],
+ ["Agonist","How drugs work","A molecule that binds to a receptor site and mimics or enhances a neurotransmitter's effect."],
+ ["Antagonist","How drugs work","A molecule that binds to a receptor site and reduces or blocks a neurotransmitter's effect."],
+ ["Reuptake inhibitors","How drugs work","Drugs that block the reabsorption of neurotransmitters."],
+ ["Tolerance","How drugs work","A drug's effect gets weaker with regular use."],
+ ["Addiction","How drugs work","Compulsive craving for something despite knowing the harmful consequences."],
+ ["Withdrawal","How drugs work","Unpleasant physical, cognitive or emotional symptoms when cutting back on a substance."],
+ ["Stimulants","Stimulants","Drugs that excite neural activity and speed up body functions."],
+ ["Caffeine","Stimulants","A stimulant that boosts alertness and body functions."],
+ ["Cocaine","Stimulants","Addictive stimulant that triggers dopamine, serotonin and norepinephrine."],
+ ["Depressants","Depressants & more","Drugs that reduce neural activity and slow down body functions."],
+ ["Alcohol","Depressants & more","A depressant that slows the central nervous system, impairing judgement, memory and physical movement."],
+ ["Opioids","Depressants & more","Drugs that act as agonists in the brain to reduce pain and cause euphoria."],
+ ["Heroin","Depressants & more","An opioid that acts as a depressant, relieving pain and causing euphoria."],
+ ["Hallucinogens","Depressants & more","Drugs that distort perception and cause sensory images that aren't real."],
+ ["Marijuana","Depressants & more","A mild hallucinogen that also releases dopamine."],
+
+ ["Heredity","Nature & nurture","The genetic passing of characteristics from parents to offspring."],
+ ["Nature","Nature & nurture","The idea that human behavior is shaped by biology."],
+ ["Nurture","Nature & nurture","The idea that human behavior is shaped by life experiences."],
+ ["Genetic predisposition","Nature & nurture","Being more likely to develop a trait because of inherited genes."],
+ ["Evolutionary perspective","Nature & nurture","Explains human behavior as a product of natural selection."],
+ ["Natural selection","Nature & nurture","Traits that help survival are passed on to the next generation and become more common than other traits."],
+ ["Eugenics","Nature & nurture","The belief in \"improving\" the human population by controlling who has children."],
+ ["Twin studies","Nature & nurture","Studying twins to see how much nature versus nurture shapes behavior."],
+ ["Family studies","Nature & nurture","Studying families to see how inherited traits affect someone."],
+ ["Adoption studies","Nature & nurture","Comparing adopted children's behavior with their adoptive and biological parents."]
+].map(([term,region,def],i)=>({i,term,region,def}));
+
+const UNITS={
+ parts:["Brain stem","Cerebral cortex","Hindbrain","Center of the brain","Limbic system"],
+ chem:["Neurotransmitters","Hormones"],
+ neuro:["Neurons","Nervous system"],
+ senses:["Sensation basics","Vision","Hearing","Other senses"],
+ sleep:["Sleep"],
+ drugs:["How drugs work","Stimulants","Depressants & more"],
+ genes:["Nature & nurture"]
+};
+UNITS.all=Object.values(UNITS).flat();
+let unit="parts";
+const REGIONS=UNITS.all;
+let mode="mc", reverse=false, active=new Set(UNITS.parts);
+const tag=t=>{const a=t.term.toLowerCase(),b=t.region.toLowerCase();return a.includes(b)||b.includes(a)?"":t.region};
+let deck=[], pos=0, score=0, missed=[], answered=false;
+const $=id=>document.getElementById(id);
+const stage=$("stage");
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// region chips
+function drawChips(){
+  $("regions").parentElement.hidden=UNITS[unit].length<2;
+  $("regions").innerHTML=UNITS[unit].map(r=>`<button class="chip" aria-pressed="${active.has(r)}" data-r="${esc(r)}">${esc(r)}</button>`).join("");
+}
+drawChips();
+$("sub").textContent=TERMS.length+" terms from his notes, grouped by topic.";
+$("units").onclick=e=>{const b=e.target.closest("button");if(!b)return;unit=b.dataset.u;
+  [...$("units").children].forEach(x=>x.setAttribute("aria-pressed",x===b));
+  active=new Set(UNITS[unit]);drawChips();start()};
+$("regions").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;const r=b.dataset.r;
+  if(active.has(r)){if(active.size===1)return;active.delete(r)}else active.add(r);
+  b.setAttribute("aria-pressed",active.has(r));start()};
+$("modes").onclick=e=>{const b=e.target.closest("button");if(!b)return;mode=b.dataset.m;
+  [...$("modes").children].forEach(x=>x.setAttribute("aria-pressed",x===b));
+  $("dirWrap").hidden=mode!=="mc";start()};
+$("dir").onchange=e=>{reverse=e.target.checked;start()};
+
+function start(list){
+  deck=shuffle(list||TERMS.filter(t=>active.has(t.region)));
+  pos=0;score=0;missed=[];render();
+}
+function updateBar(){
+  $("count").textContent=`${Math.min(pos+1,deck.length)} / ${deck.length}`;
+  $("score").textContent=mode==="flash"?"–":score;
+  $("prog").style.width=(pos/deck.length*100)+"%";
+}
+function render(){
+  answered=false;updateBar();
+  if(pos>=deck.length)return finish();
+  const t=deck[pos];
+  if(mode==="flash")return renderFlash(t);
+  if(mode==="type")return renderType(t);
+  renderMC(t);
+}
+function distractors(t){
+  const same=shuffle(TERMS.filter(x=>x!==t&&x.region===t.region));
+  const pool=TERMS.filter(x=>UNITS[unit].includes(x.region));
+  const other=shuffle(pool.filter(x=>x!==t&&x.region!==t.region));
+  return [...same.slice(0,2),...other].slice(0,3);
+}
+function renderMC(t){
+  const opts=shuffle([t,...distractors(t)]);
+  const q=reverse?`<p class="prompt term">${esc(t.term)}</p>`:`<p class="prompt">${esc(t.def)}</p>`;
+  stage.innerHTML=`<div class="card"><span class="region">${esc(tag(t))}</span>${q}
+   <div class="opts">${opts.map(o=>`<button class="opt ${reverse?"":"t"}" data-i="${o.i}">${esc(reverse?o.def:o.term)}</button>`).join("")}</div>
+   <div id="fb"></div></div>`;
+  stage.querySelector(".opts").onclick=e=>{const b=e.target.closest(".opt");if(!b||answered)return;answered=true;
+    const ok=+b.dataset.i===t.i;
+    stage.querySelectorAll(".opt").forEach(x=>{x.disabled=true;if(+x.dataset.i===t.i)x.classList.add("right")});
+    if(!ok){b.classList.add("wrong");missed.push(t)}else score++;
+    showFeedback(ok,t);
+  };
+}
+function norm(s){return s.toLowerCase().replace(/[’'`]/g,"").replace(/[^a-z ]/g," ").replace(/\s+/g," ").trim()}
+function lev(a,b){const d=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;i++){let p=d[0];d[0]=i;for(let j=1;j<=b.length;j++){const tmp=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=tmp}}return d[b.length]}
+function check(input,term){
+  const a=norm(input),b=norm(term);if(!a)return false;
+  if(a===b)return true;
+  const tol=b.length>20?4:b.length>8?2:1;
+  return lev(a,b)<=tol;
+}
+function renderType(t){
+  stage.innerHTML=`<div class="card"><span class="region">${esc(tag(t))}</span><p class="prompt">${esc(t.def)}</p>
+   <form id="tf"><input type="text" id="ans" placeholder="Type the brain part" autocomplete="off" autocapitalize="off" spellcheck="false">
+   <div class="btns"><button class="btn" type="submit">Check</button><button class="btn ghost" type="button" id="skip">Show answer</button></div></form>
+   <div id="fb"></div></div>`;
+  const inp=$("ans");setTimeout(()=>inp.focus(),50);
+  const done=ok=>{if(answered)return;answered=true;inp.disabled=true;
+    stage.querySelector(".btns").remove();if(ok)score++;else missed.push(t);showFeedback(ok,t,inp.value)};
+  $("tf").onsubmit=e=>{e.preventDefault();if(!inp.value.trim())return;done(check(inp.value,t.term))};
+  $("skip").onclick=()=>done(false);
+}
+function showFeedback(ok,t,typed){
+  const exact=typed&&ok&&norm(typed)!==norm(t.term);
+  $("fb").innerHTML=`<div class="feedback ${ok?"ok":"no"}">${ok?"Correct!":"Not quite."}
+    <small>${ok&&!exact?"":`Answer: <b>${esc(t.term)}</b>${exact?" (watch the spelling)":""}`}</small></div>
+    <div class="btns"><button class="btn" id="next">${pos+1<deck.length?"Next":"See results"}</button></div>`;
+  $("next").onclick=()=>{pos++;render()};$("next").focus();
+}
+function renderFlash(t){
+  stage.innerHTML=`<div class="card flip" id="fc" role="button" tabindex="0" aria-label="Flip card">
+    <div class="flip-inner"><div class="face"><span class="region">${esc(tag(t))}</span><p class="prompt term">${esc(t.term)}</p><p class="hint">Tap to flip</p></div>
+    <div class="face back"><span class="region">${esc(t.term)}</span><p class="prompt">${esc(t.def)}</p></div></div></div>
+    <div class="btns"><button class="btn ghost" id="again">Still learning</button><button class="btn" id="got">Got it</button></div>`;
+  const fc=$("fc");const flip=()=>fc.classList.toggle("on");
+  fc.onclick=flip;fc.onkeydown=e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();flip()}};
+  $("got").onclick=()=>{score++;pos++;render()};
+  $("again").onclick=()=>{missed.push(t);pos++;render()};
+}
+function finish(){
+  $("prog").style.width="100%";$("count").textContent=`${deck.length} / ${deck.length}`;$("score").textContent=score;
+  const pct=Math.round(score/deck.length*100);
+  const msg=pct===100?"Perfect round!":pct>=80?"Great work.":pct>=60?"Getting there.":"Keep practicing.";
+  stage.innerHTML=`<div class="card"><div class="label">${mode==="flash"?"Knew it":"Final score"}</div>
+    <div class="big">${score} / ${deck.length}</div><p class="prompt">${msg}</p>
+    <div class="btns">${missed.length?`<button class="btn" id="redo">Practice the ${missed.length} missed</button>`:""}
+    <button class="btn ${missed.length?"ghost":""}" id="again">Start over</button></div>
+    ${missed.length?`<div class="missed"><div class="label" style="border:0;padding:0">To review</div>${missed.map(m=>`<div><b>${esc(m.term)}</b><br>${esc(m.def)}</div>`).join("")}</div>`:""}</div>`;
+  if(missed.length)$("redo").onclick=()=>start(missed.slice());
+  $("again").onclick=()=>start();
+}
+start();
+</script>
+
+</body>
+</html>
