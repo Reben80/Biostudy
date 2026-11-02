@@ -102,6 +102,9 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 .focus-btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 body.focus header,body.focus #setup,body.focus .guide{display:none}
 body.focus .wrap{padding-top:8px}
+.timer{font-variant-numeric:tabular-nums;color:var(--ink);min-width:2.6em;text-align:right}
+.timeline{margin:6px 0 0;color:var(--muted)}
+.timeline b{color:var(--ink)}
 @media (prefers-reduced-motion:reduce){.flip-inner,.progress i{transition:none}}
 </style>
 </head>
@@ -145,11 +148,12 @@ body.focus .wrap{padding-top:8px}
   </div>
 
   <label class="toggle" id="dirWrap"><input type="checkbox" id="dir"> Show the term, pick the definition</label>
+      <label class="toggle"><input type="checkbox" id="timerOn" checked> Show timer</label>
     </div>
   </details>
 
   <div>
-    <div class="bar"><span id="count">1 / 18</span><span class="bar-r"><button class="focus-btn" id="focusBtn" type="button" aria-pressed="false">Focus mode</button><span>Score <b id="score">0</b></span></span></div>
+    <div class="bar"><span id="count">1 / 18</span><span class="bar-r"><span class="timer" id="timer" aria-label="Time">0:00</span><button class="focus-btn" id="focusBtn" type="button" aria-pressed="false">Focus mode</button><span>Score <b id="score">0</b></span></span></div>
     <div class="progress"><i id="prog"></i></div>
   </div>
 
@@ -352,11 +356,18 @@ $("regions").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;const r=
 $("modes").onclick=e=>{const b=e.target.closest("button");if(!b)return;mode=b.dataset.m;
   [...$("modes").children].forEach(x=>x.setAttribute("aria-pressed",x===b));
   $("dirWrap").hidden=mode!=="mc";start()};
+$("timerOn").onchange=e=>{$("timer").hidden=!e.target.checked;try{localStorage.setItem("timerOff",e.target.checked?"":"1")}catch(_){}};
+try{if(localStorage.getItem("timerOff")){$("timerOn").checked=false;$("timer").hidden=true}}catch(_){}
 $("dir").onchange=e=>{reverse=e.target.checked;start()};
 
+let t0=0,tick=null,isRetry=false;
+const fmt=ms=>{const s=Math.floor(ms/1000);return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
+function startTimer(){clearInterval(tick);t0=Date.now();$("timer").textContent="0:00";
+  tick=setInterval(()=>{$("timer").textContent=fmt(Date.now()-t0)},1000)}
 function start(list){
+  isRetry=!!list;
   deck=shuffle(list||TERMS.filter(t=>active.has(t.region)));
-  pos=0;score=0;missed=[];render();
+  pos=0;score=0;missed=[];startTimer();render();
 }
 const UNAMES={parts:"Brain parts",chem:"Brain chemicals",neuro:"Neurons & nerves",senses:"Sensation",sleep:"Sleep",drugs:"Drugs",genes:"Nature & nurture",all:"Everything"};
 const MNAMES={mc:"Multiple choice",type:"Type it",flash:"Flashcards"};
@@ -430,11 +441,16 @@ function renderFlash(t){
   $("again").onclick=()=>{missed.push(t);pos++;render()};
 }
 function finish(){
+  clearInterval(tick);const took=Date.now()-t0;$("timer").textContent=fmt(took);
+  let best=null,newBest=false;
+  if(!isRetry){const key="best:"+unit+":"+mode+":"+[...active].sort().join("|");
+    try{best=+localStorage.getItem(key)||null;if(score===deck.length&&(!best||took<best)){newBest=!!best;localStorage.setItem(key,took);best=took}}catch(e){}}
+  const timeLine=$("timerOn").checked?`<p class="timeline">Time: <b>${fmt(took)}</b>${newBest?" · New best!":best?` · Best perfect round: ${fmt(best)}`:""}</p>`:"";
   $("prog").style.width="100%";$("count").textContent=`${deck.length} / ${deck.length}`;$("score").textContent=score;
   const pct=Math.round(score/deck.length*100);
   const msg=pct===100?"Perfect round!":pct>=80?"Great work.":pct>=60?"Getting there.":"Keep practicing.";
   stage.innerHTML=`<div class="card"><div class="label">${mode==="flash"?"Knew it":"Final score"}</div>
-    <div class="big">${score} / ${deck.length}</div><p class="prompt">${msg}</p>
+    <div class="big">${score} / ${deck.length}</div><p class="prompt">${msg}</p>${timeLine}
     <div class="btns">${missed.length?`<button class="btn" id="redo">Practice the ${missed.length} missed</button>`:""}
     <button class="btn ${missed.length?"ghost":""}" id="again">Start over</button></div>
     ${missed.length?`<div class="missed"><div class="label" style="border:0;padding:0">To review</div>${missed.map(m=>`<div><b>${esc(m.term)}</b><br>${esc(m.def)}</div>`).join("")}</div>`:""}</div>`;
