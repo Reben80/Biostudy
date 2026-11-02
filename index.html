@@ -93,6 +93,15 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 .steps b{color:var(--ink)}
 .watch{background:var(--accent-soft);border-radius:12px;padding:12px 14px;color:var(--ink)!important}
 .pdf .btn{align-self:flex-start;text-decoration:none;display:inline-block}
+.fold summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.fold summary::-webkit-details-marker{display:none}
+.fold[open] .chev{font-size:0}.fold[open] .chev::after{content:"Hide";font-size:.85rem;color:var(--muted)}
+.fold[open] summary{margin-bottom:10px}
+.bar-r{display:flex;align-items:center;gap:12px}
+.focus-btn{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font:700 .8rem var(--body);padding:5px 10px;border-radius:999px;cursor:pointer}
+.focus-btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+body.focus header,body.focus #setup,body.focus .guide{display:none}
+body.focus .wrap{padding-top:8px}
 @media (prefers-reduced-motion:reduce){.flip-inner,.progress i{transition:none}}
 </style>
 </head>
@@ -140,14 +149,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
   </details>
 
   <div>
-    <div class="bar"><span id="count">1 / 18</span><span>Score <b id="score">0</b></span></div>
+    <div class="bar"><span id="count">1 / 18</span><span class="bar-r"><button class="focus-btn" id="focusBtn" type="button" aria-pressed="false">Focus mode</button><span>Score <b id="score">0</b></span></span></div>
     <div class="progress"><i id="prog"></i></div>
   </div>
 
   <div id="stage"></div>
 
-  <section class="guide" aria-labelledby="howto">
-    <h2 id="howto">How to study</h2>
+  <details class="guide fold">
+    <summary><h2>How to study</h2><span class="chev" aria-hidden="true">Show</span></summary>
     <ol class="steps">
       <li><b>One topic at a time.</b> Pick a topic and do a round of multiple choice to learn the terms.</li>
       <li><b>Then type it.</b> Switch to "Type it" for the same topic. Recalling a word is harder than picking it, and that is what makes it stick.</li>
@@ -157,7 +166,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
       <li><b>Mix it up before the test.</b> The day before, choose "Everything" so the terms come in random order like a real exam.</li>
     </ol>
     <p class="watch"><b>Easy to mix up:</b> leptin vs. ghrelin, rods vs. cones, sympathetic vs. parasympathetic, agonist vs. antagonist, absolute vs. difference threshold, and volley vs. frequency vs. place theory.</p>
-  </section>
+  </details>
 
   <section class="guide pdf">
     <h2>Printable study guide</h2>
@@ -432,6 +441,11 @@ function finish(){
   if(missed.length)$("redo").onclick=()=>start(missed.slice());
   $("again").onclick=()=>start();
 }
+function setFocus(on){document.body.classList.toggle("focus",on);$("focusBtn").setAttribute("aria-pressed",on);
+  $("focusBtn").textContent=on?"Exit focus":"Focus mode";try{localStorage.setItem("focus",on?"1":"")}catch(e){}
+  if(on)window.scrollTo(0,0)}
+$("focusBtn").onclick=()=>setFocus(!document.body.classList.contains("focus"));
+try{if(localStorage.getItem("focus"))setFocus(true)}catch(e){}
 start();
 </script>
 
