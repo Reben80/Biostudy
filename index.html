@@ -105,6 +105,11 @@ body.focus .wrap{padding-top:8px}
 .timer{font-variant-numeric:tabular-nums;color:var(--ink);min-width:2.6em;text-align:right}
 .timeline{margin:6px 0 0;color:var(--muted)}
 .timeline b{color:var(--ink)}
+.cd{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.cd-num{font-weight:700;font-variant-numeric:tabular-nums;min-width:1.6em;color:var(--muted)}
+.cd-track{flex:1;height:5px;border-radius:5px;background:var(--line);overflow:hidden}
+.cd-track i{display:block;height:100%;background:var(--ink);width:100%}
+.hurry .cd-num{color:var(--bad)}.hurry .cd-track i{background:var(--bad)}
 @media (prefers-reduced-motion:reduce){.flip-inner,.progress i{transition:none}}
 </style>
 </head>
@@ -149,6 +154,15 @@ body.focus .wrap{padding-top:8px}
 
   <label class="toggle" id="dirWrap"><input type="checkbox" id="dir"> Show the term, pick the definition</label>
       <label class="toggle"><input type="checkbox" id="timerOn" checked> Show timer</label>
+      <div id="limitWrap">
+        <div class="label">Time limit per question</div>
+        <div class="seg" id="limit">
+          <button data-s="0" aria-pressed="true">Off</button>
+          <button data-s="15" aria-pressed="false">15 sec</button>
+          <button data-s="30" aria-pressed="false">30 sec</button>
+          <button data-s="60" aria-pressed="false">60 sec</button>
+        </div>
+      </div>
     </div>
   </details>
 
@@ -355,9 +369,14 @@ $("regions").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;const r=
   b.setAttribute("aria-pressed",active.has(r));start()};
 $("modes").onclick=e=>{const b=e.target.closest("button");if(!b)return;mode=b.dataset.m;
   [...$("modes").children].forEach(x=>x.setAttribute("aria-pressed",x===b));
-  $("dirWrap").hidden=mode!=="mc";start()};
+  $("dirWrap").hidden=mode!=="mc";$("limitWrap").hidden=mode==="flash";start()};
 $("timerOn").onchange=e=>{$("timer").hidden=!e.target.checked;try{localStorage.setItem("timerOff",e.target.checked?"":"1")}catch(_){}};
 try{if(localStorage.getItem("timerOff")){$("timerOn").checked=false;$("timer").hidden=true}}catch(_){}
+let limit=0,cdTick=null;
+function setLimit(v){limit=v;[...$("limit").children].forEach(x=>x.setAttribute("aria-pressed",+x.dataset.s===v))}
+$("limit").onclick=e=>{const b=e.target.closest("button");if(!b)return;setLimit(+b.dataset.s);
+  try{localStorage.setItem("limit",limit)}catch(_){};start()};
+try{setLimit(+localStorage.getItem("limit")||0)}catch(_){}
 $("dir").onchange=e=>{reverse=e.target.checked;start()};
 
 let t0=0,tick=null,isRetry=false;
@@ -372,18 +391,37 @@ function start(list){
 const UNAMES={parts:"Brain parts",chem:"Brain chemicals",neuro:"Neurons & nerves",senses:"Sensation",sleep:"Sleep",drugs:"Drugs",genes:"Nature & nurture",all:"Everything"};
 const MNAMES={mc:"Multiple choice",type:"Type it",flash:"Flashcards"};
 function updateBar(){
-  $("summ").textContent=UNAMES[unit]+" · "+MNAMES[mode];
+  $("summ").textContent=UNAMES[unit]+" · "+MNAMES[mode]+(limit&&mode!=="flash"?" · "+limit+" sec":"");
   $("count").textContent=`${Math.min(pos+1,deck.length)} / ${deck.length}`;
   $("score").textContent=mode==="flash"?"–":score;
   $("prog").style.width=(pos/deck.length*100)+"%";
 }
+function stopCountdown(){clearInterval(cdTick);cdTick=null}
+function startCountdown(t){
+  stopCountdown();if(!limit||mode==="flash")return;
+  const card=stage.querySelector(".card");
+  card.insertAdjacentHTML("afterbegin",`<div class="cd"><span class="cd-num" id="cdNum">${limit}</span><span class="cd-track"><i id="cdBar"></i></span></div>`);
+  const end=Date.now()+limit*1000;
+  const step=()=>{const left=Math.max(0,end-Date.now());
+    const n=$("cdNum"),b=$("cdBar");if(!n)return stopCountdown();
+    n.textContent=Math.ceil(left/1000);b.style.width=(left/(limit*1000)*100)+"%";
+    card.classList.toggle("hurry",left<=5000);
+    if(left<=0){stopCountdown();timeUp(t)}};
+  step();cdTick=setInterval(step,100);
+}
+function timeUp(t){
+  if(answered)return;answered=true;missed.push(t);
+  stage.querySelectorAll(".opt").forEach(x=>{x.disabled=true;if(+x.dataset.i===t.i)x.classList.add("right")});
+  const inp=$("ans");if(inp){inp.disabled=true;const b=stage.querySelector("#tf .btns");if(b)b.remove()}
+  showFeedback(false,t,null,"Time's up.");
+}
 function render(){
-  answered=false;updateBar();
+  stopCountdown();answered=false;updateBar();
   if(pos>=deck.length)return finish();
   const t=deck[pos];
   if(mode==="flash")return renderFlash(t);
-  if(mode==="type")return renderType(t);
-  renderMC(t);
+  if(mode==="type")renderType(t);else renderMC(t);
+  startCountdown(t);
 }
 function distractors(t){
   const same=shuffle(TERMS.filter(x=>x!==t&&x.region===t.region));
@@ -414,7 +452,7 @@ function check(input,term){
 }
 function renderType(t){
   stage.innerHTML=`<div class="card"><span class="region">${esc(tag(t))}</span><p class="prompt">${esc(t.def)}</p>
-   <form id="tf"><input type="text" id="ans" placeholder="Type the brain part" autocomplete="off" autocapitalize="off" spellcheck="false">
+   <form id="tf"><input type="text" id="ans" placeholder="Type the term" autocomplete="off" autocapitalize="off" spellcheck="false">
    <div class="btns"><button class="btn" type="submit">Check</button><button class="btn ghost" type="button" id="skip">Show answer</button></div></form>
    <div id="fb"></div></div>`;
   const inp=$("ans");setTimeout(()=>inp.focus(),50);
@@ -423,9 +461,10 @@ function renderType(t){
   $("tf").onsubmit=e=>{e.preventDefault();if(!inp.value.trim())return;done(check(inp.value,t.term))};
   $("skip").onclick=()=>done(false);
 }
-function showFeedback(ok,t,typed){
+function showFeedback(ok,t,typed,note){
+  stopCountdown();
   const exact=typed&&ok&&norm(typed)!==norm(t.term);
-  $("fb").innerHTML=`<div class="feedback ${ok?"ok":"no"}">${ok?"Correct!":"Not quite."}
+  $("fb").innerHTML=`<div class="feedback ${ok?"ok":"no"}">${ok?"Correct!":note||"Not quite."}
     <small>${ok&&!exact?"":`Answer: <b>${esc(t.term)}</b>${exact?" (watch the spelling)":""}`}</small></div>
     <div class="btns"><button class="btn" id="next">${pos+1<deck.length?"Next":"See results"}</button></div>`;
   $("next").onclick=()=>{pos++;render()};$("next").focus();
