@@ -79,6 +79,20 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 .missed{display:flex;flex-direction:column;gap:12px;margin-top:16px}
 .missed div{border-top:1px solid var(--line);padding-top:10px}
 .missed b{font-family:var(--display)}
+.setup{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.setup summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px}
+.setup summary::-webkit-details-marker{display:none}
+.summ{display:block;font-weight:700;font-size:.98rem;margin-top:2px}
+.chev{font-weight:700;font-size:.85rem;color:var(--accent);white-space:nowrap}
+.setup[open] .chev{color:var(--muted)}
+.setup-body{display:flex;flex-direction:column;gap:16px;padding:4px 14px 16px}
+.guide{border-top:1px solid var(--line);padding-top:20px;display:flex;flex-direction:column;gap:10px}
+.guide h2{font-family:var(--display);font-weight:800;font-size:1.35rem;margin:0}
+.guide p{margin:0;color:var(--muted)}
+.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
+.steps b{color:var(--ink)}
+.watch{background:var(--accent-soft);border-radius:12px;padding:12px 14px;color:var(--ink)!important}
+.pdf .btn{align-self:flex-start;text-decoration:none;display:inline-block}
 @media (prefers-reduced-motion:reduce){.flip-inner,.progress i{transition:none}}
 </style>
 </head>
@@ -88,9 +102,11 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
   <header>
     <h1>Psych Vocab <span>Quiz</span></h1>
     <p class="sub" id="sub"></p>
-    <p class="sub"><a href="Psych_Vocab_Study_Guide.pdf" style="color:var(--accent);font-weight:700">Download the printable study guide (PDF)</a></p>
   </header>
 
+  <details class="setup" id="setup">
+    <summary><span><span class="label" style="margin:0">Topic &amp; practice mode</span><span id="summ" class="summ"></span></span><span class="chev" aria-hidden="true">Change</span></summary>
+    <div class="setup-body">
   <div>
     <div class="label">Topic</div>
     <div class="chips" id="units">
@@ -120,6 +136,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
   </div>
 
   <label class="toggle" id="dirWrap"><input type="checkbox" id="dir"> Show the term, pick the definition</label>
+    </div>
+  </details>
 
   <div>
     <div class="bar"><span id="count">1 / 18</span><span>Score <b id="score">0</b></span></div>
@@ -127,6 +145,25 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
   </div>
 
   <div id="stage"></div>
+
+  <section class="guide" aria-labelledby="howto">
+    <h2 id="howto">How to study</h2>
+    <ol class="steps">
+      <li><b>One topic at a time.</b> Pick a topic and do a round of multiple choice to learn the terms.</li>
+      <li><b>Then type it.</b> Switch to "Type it" for the same topic. Recalling a word is harder than picking it, and that is what makes it stick.</li>
+      <li><b>Redo what you missed.</b> At the end, tap "Practice the missed" until the round is perfect.</li>
+      <li><b>Flip it around.</b> In multiple choice, tick "Show the term, pick the definition" so you know both directions.</li>
+      <li><b>Short sessions, spread out.</b> Fifteen minutes a day for several days beats one long night before the exam.</li>
+      <li><b>Mix it up before the test.</b> The day before, choose "Everything" so the terms come in random order like a real exam.</li>
+    </ol>
+    <p class="watch"><b>Easy to mix up:</b> leptin vs. ghrelin, rods vs. cones, sympathetic vs. parasympathetic, agonist vs. antagonist, absolute vs. difference threshold, and volley vs. frequency vs. place theory.</p>
+  </section>
+
+  <section class="guide pdf">
+    <h2>Printable study guide</h2>
+    <p>All terms on paper, grouped by topic. Fold each page along the dashed line to hide the definitions and quiz yourself.</p>
+    <a class="btn" href="Psych_Vocab_Study_Guide.pdf">Download the PDF</a>
+  </section>
 </div>
 
 <script>
@@ -312,7 +349,10 @@ function start(list){
   deck=shuffle(list||TERMS.filter(t=>active.has(t.region)));
   pos=0;score=0;missed=[];render();
 }
+const UNAMES={parts:"Brain parts",chem:"Brain chemicals",neuro:"Neurons & nerves",senses:"Sensation",sleep:"Sleep",drugs:"Drugs",genes:"Nature & nurture",all:"Everything"};
+const MNAMES={mc:"Multiple choice",type:"Type it",flash:"Flashcards"};
 function updateBar(){
+  $("summ").textContent=UNAMES[unit]+" · "+MNAMES[mode];
   $("count").textContent=`${Math.min(pos+1,deck.length)} / ${deck.length}`;
   $("score").textContent=mode==="flash"?"–":score;
   $("prog").style.width=(pos/deck.length*100)+"%";
