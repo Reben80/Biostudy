@@ -84,7 +84,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 .setup summary::-webkit-details-marker{display:none}
 .summ{display:block;font-weight:700;font-size:.98rem;margin-top:2px}
 .chev{font-weight:700;font-size:.85rem;color:var(--accent);white-space:nowrap}
-.setup[open] .chev{color:var(--muted)}
+.setup[open] .chev{font-size:0}.setup[open] .chev::after{content:"Done";font-size:.85rem;color:var(--accent)}
 .setup-body{display:flex;flex-direction:column;gap:16px;padding:4px 14px 16px}
 .guide{border-top:1px solid var(--line);padding-top:20px;display:flex;flex-direction:column;gap:10px}
 .guide h2{font-family:var(--display);font-weight:800;font-size:1.35rem;margin:0}
@@ -125,7 +125,7 @@ body.focus .wrap{padding-top:8px}
     <summary><span><span class="label" style="margin:0">Topic &amp; practice mode</span><span id="summ" class="summ"></span></span><span class="chev" aria-hidden="true">Change</span></summary>
     <div class="setup-body">
   <div>
-    <div class="label">Topic</div>
+    <div class="label">Topics <span style="text-transform:none;letter-spacing:0;font-weight:400">(pick one or more)</span></div>
     <div class="chips" id="units">
       <button class="chip unit" data-u="parts" aria-pressed="true">Brain parts</button>
       <button class="chip unit" data-u="chem" aria-pressed="false">Brain chemicals</button>
@@ -344,7 +344,9 @@ const UNITS={
  genes:["Nature & nurture"]
 };
 UNITS.all=Object.values(UNITS).flat();
-let unit="parts";
+const TOPICS=["parts","chem","neuro","senses","sleep","drugs","genes"];
+let units=new Set(["parts"]);
+const curRegions=()=>TOPICS.filter(u=>units.has(u)).flatMap(u=>UNITS[u]);
 const REGIONS=UNITS.all;
 let mode="mc", reverse=false, active=new Set(UNITS.parts);
 const tag=t=>{const a=t.term.toLowerCase(),b=t.region.toLowerCase();return a.includes(b)||b.includes(a)?"":t.region};
@@ -356,14 +358,18 @@ const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&qu
 
 // region chips
 function drawChips(){
-  $("regions").parentElement.hidden=UNITS[unit].length<2;
-  $("regions").innerHTML=UNITS[unit].map(r=>`<button class="chip" aria-pressed="${active.has(r)}" data-r="${esc(r)}">${esc(r)}</button>`).join("");
+  $("regions").parentElement.hidden=curRegions().length<2;
+  $("regions").innerHTML=curRegions().map(r=>`<button class="chip" aria-pressed="${active.has(r)}" data-r="${esc(r)}">${esc(r)}</button>`).join("");
 }
 drawChips();
 $("sub").textContent=TERMS.length+" terms from his notes, grouped by topic.";
-$("units").onclick=e=>{const b=e.target.closest("button");if(!b)return;unit=b.dataset.u;
-  [...$("units").children].forEach(x=>x.setAttribute("aria-pressed",x===b));
-  active=new Set(UNITS[unit]);drawChips();start()};
+function drawUnits(){const all=units.size===TOPICS.length;
+  [...$("units").children].forEach(x=>x.setAttribute("aria-pressed",x.dataset.u==="all"?all:units.has(x.dataset.u)))}
+$("units").onclick=e=>{const b=e.target.closest("button");if(!b)return;const u=b.dataset.u;
+  if(u==="all"){units=units.size===TOPICS.length?new Set(["parts"]):new Set(TOPICS);active=new Set(curRegions())}
+  else if(units.has(u)){if(units.size===1)return;units.delete(u);UNITS[u].forEach(r=>active.delete(r))}
+  else{units.add(u);UNITS[u].forEach(r=>active.add(r))}
+  drawUnits();drawChips();start()};
 $("regions").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;const r=b.dataset.r;
   if(active.has(r)){if(active.size===1)return;active.delete(r)}else active.add(r);
   b.setAttribute("aria-pressed",active.has(r));start()};
@@ -391,7 +397,9 @@ function start(list){
 const UNAMES={parts:"Brain parts",chem:"Brain chemicals",neuro:"Neurons & nerves",senses:"Sensation",sleep:"Sleep",drugs:"Drugs",genes:"Nature & nurture",all:"Everything"};
 const MNAMES={mc:"Multiple choice",type:"Type it",flash:"Flashcards"};
 function updateBar(){
-  $("summ").textContent=UNAMES[unit]+" · "+MNAMES[mode]+(limit&&mode!=="flash"?" · "+limit+" sec":"");
+  const us=TOPICS.filter(u=>units.has(u));
+  const tn=us.length===TOPICS.length?"Everything":us.length===1?UNAMES[us[0]]:us.length===2?UNAMES[us[0]]+" + "+UNAMES[us[1]]:us.length+" topics";
+  $("summ").textContent=tn+" · "+MNAMES[mode]+(limit&&mode!=="flash"?" · "+limit+" sec":"");
   $("count").textContent=`${Math.min(pos+1,deck.length)} / ${deck.length}`;
   $("score").textContent=mode==="flash"?"–":score;
   $("prog").style.width=(pos/deck.length*100)+"%";
@@ -425,7 +433,7 @@ function render(){
 }
 function distractors(t){
   const same=shuffle(TERMS.filter(x=>x!==t&&x.region===t.region));
-  const pool=TERMS.filter(x=>UNITS[unit].includes(x.region));
+  const cr=curRegions();const pool=TERMS.filter(x=>cr.includes(x.region));
   const other=shuffle(pool.filter(x=>x!==t&&x.region!==t.region));
   return [...same.slice(0,2),...other].slice(0,3);
 }
@@ -482,7 +490,7 @@ function renderFlash(t){
 function finish(){
   clearInterval(tick);const took=Date.now()-t0;$("timer").textContent=fmt(took);
   let best=null,newBest=false;
-  if(!isRetry){const key="best:"+unit+":"+mode+":"+[...active].sort().join("|");
+  if(!isRetry){const key="best:"+mode+":"+[...active].sort().join("|");
     try{best=+localStorage.getItem(key)||null;if(score===deck.length&&(!best||took<best)){newBest=!!best;localStorage.setItem(key,took);best=took}}catch(e){}}
   const timeLine=$("timerOn").checked?`<p class="timeline">Time: <b>${fmt(took)}</b>${newBest?" · New best!":best?` · Best perfect round: ${fmt(best)}`:""}</p>`:"";
   $("prog").style.width="100%";$("count").textContent=`${deck.length} / ${deck.length}`;$("score").textContent=score;
